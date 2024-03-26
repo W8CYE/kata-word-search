@@ -28,30 +28,25 @@ class Coordinate:
 
 class WordSearch:
     def __init__(self, puzzle: str) -> None:
-        self.words, self.puzzle = self._parse_puzzle(puzzle)
-        self.origin: Coordinate = Coordinate(0, 0)
-        self.max_bounds: Coordinate = Coordinate(len(self.puzzle[0]), len(self.puzzle))
-        self.directions = [Coordinate(dx, dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1) if (dx, dy) != (0, 0)]
-        self.word_trie_root: dict[str, dict] = WordSearch._make_trie(self.words)
-
-    def _parse_puzzle(self, puzzle: str) -> tuple[list[str], list[list[str]]]:
-        words_line, *puzzle_lines = puzzle.split("\n")
-        words = words_line.split(",")
-        puzzled = [line.split(",") for line in puzzle_lines]
-        return words, puzzled
+        self.words, *self.puzzle = [line.split(",") for line in puzzle.split("\n")]
+        self.dimension = len(self.puzzle)
+        self.word_trie_root: dict[str, dict] = WordSearch.make_trie(self.words)
 
     def search_for_words(self) -> dict[str, list[tuple[int, int]]]:
-        # does not account for multiple instances of the same word
+        cells = (Coordinate(x, y) for x, y in product(range(self.dimension), repeat=2))
+        directions = (Coordinate(dx, dy) for dx, dy in product([-1, 0, 1], repeat=2) if (dx, dy) != (0, 0))
+
+        # does not account for multiple instances of the same word in a puzzle
         results: dict[str, list[tuple[int, int]]] = {}
-        for x, y in product(range(self.max_bounds.x), range(self.max_bounds.y)):
-            for direction in self.directions:
-                for word, path in self.get_paths_and_words(Coordinate(x, y), direction):
-                    results[word] = path
+
+        for start, direction in product(cells, directions):
+            for word, path in self.get_paths_and_words(start, direction):
+                results[word] = path
         return results
 
     def get_paths_and_words(self, start: Coordinate, direction: Coordinate) -> Iterable[tuple[str, list[tuple[int, int]]]]:
         path: list[tuple[int, int]] = []
-        letters: list[str] = []  # [str(direction), " : "]
+        letters: list[str] = []
         words_node: dict[str, dict] = self.word_trie_root
 
         for cell, letter in self.get_cell_coordinates_and_values(start, direction):
@@ -65,15 +60,12 @@ class WordSearch:
 
     def get_cell_coordinates_and_values(self, start: Coordinate, direction: Coordinate) -> Iterable[tuple[Coordinate, str]]:
         current = start
-        while self.origin <= current < self.max_bounds:
-            yield current, self.get_cell_value(current)
+        while Coordinate(0, 0) <= current < Coordinate(self.dimension, self.dimension):
+            yield current, self.puzzle[current.y][current.x]
             current = current + direction
 
-    def get_cell_value(self, cell: Coordinate) -> str:
-        return self.puzzle[cell.y][cell.x]
-
     @staticmethod
-    def _make_trie(words: list[str]) -> dict[str, dict]:
+    def make_trie(words: list[str]) -> dict[str, dict]:
         root: dict[str, dict] = {}
         for word in words:
             node = root
@@ -86,21 +78,21 @@ class WordSearch:
 # NOODLES BEYOND THIS POINT
 
 
-# def get_english_words(length: int = 3) -> list[str]:
-#     # path to dictionary on macos
-#     with open("/usr/share/dict/words", "r", encoding="utf-8") as f:
-#         words = f.read().splitlines()
-#     res = [word.upper() for word in words if len(word) >= length]
-#     print(f"searching with {len(res):,} dictionary words of at least {length} letters")
-#     return res
+def get_english_words(length: int = 3) -> list[str]:
+    # path to dictionary on macos
+    with open("/usr/share/dict/words", "r", encoding="utf-8") as f:
+        words = f.read().splitlines()
+    res = [word.upper() for word in words if len(word) >= length]
+    print(f"searching with {len(res):,} dictionary words of at least {length} letters")
+    return res
 
 
-# if __name__ == "__main__":
-#     with open("input2.txt", "r", encoding="utf-8") as file:
-#         puzzle_from_file = file.read()
-#     word_search = WordSearch(puzzle_from_file)
-#     # user full dictionary words instead of seed words
-#     # word_search.word_trie_root = WordSearch.make_trie(get_english_words(5))
+if __name__ == "__main__":
+    with open("input2.txt", "r", encoding="utf-8") as file:
+        puzzle_from_file = file.read()
+    word_search = WordSearch(puzzle_from_file)
+    # user full dictionary words instead of seed words
+    # word_search.word_trie_root = WordSearch.make_trie(get_english_words(5))
 
-#     for word, path in word_search.search_for_words().items():
-#         print(word, path)
+    for word, path in word_search.search_for_words().items():
+        print(word, path)
